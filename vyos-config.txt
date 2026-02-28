@@ -1,0 +1,51 @@
+# ====================================================================
+# VyOS - AWS Site-to-Site VPN Configuration (Static Routing)
+# ====================================================================
+
+# This configuration establishes an IPsec tunnel over a VTI (Virtual Tunnel Interface)
+# to an AWS Virtual Private Gateway using Static Routing for Lab 01.
+
+# Ensure you have the following information from the AWS VPN Connection outputs:
+# <AWS_TUNNEL_1_IP> : The outside public IP address of AWS VPN Tunnel 1
+# <PRE_SHARED_KEY>  : The Pre-Shared Key (PSK) for AWS VPN Tunnel 1
+# <VTI_LOCAL_IP>    : The inside link-local IP for your VyOS router (e.g., 169.254.x.y/30)
+# <VTI_REMOTE_IP>   : The inside link-local IP for the AWS VGW (e.g., 169.254.x.z)
+
+configure
+
+# 1. Define IKE Group (Phase 1)
+set vpn ipsec ike-group AWS-IKE proposal 1 dh-group '2'
+set vpn ipsec ike-group AWS-IKE proposal 1 encryption 'aes128'
+set vpn ipsec ike-group AWS-IKE proposal 1 hash 'sha1'
+set vpn ipsec ike-group AWS-IKE lifetime '28800'
+
+# 2. Define ESP Group (Phase 2)
+set vpn ipsec esp-group AWS-ESP proposal 1 encryption 'aes128'
+set vpn ipsec esp-group AWS-ESP proposal 1 hash 'sha1'
+set vpn ipsec esp-group AWS-ESP lifetime '3600'
+set vpn ipsec esp-group AWS-ESP pfs 'enable'
+
+# 3. Configure the Site-to-Site Peer (AWS Tunnel 1)
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> authentication mode 'pre-shared-secret'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> authentication pre-shared-secret '<PRE_SHARED_KEY>'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> description 'AWS Site-to-Site VPN Tunnel 1'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> ike-group 'AWS-IKE'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> local-address 'any'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> vti bind 'vti0'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_1_IP> vti esp-group 'AWS-ESP'
+
+# 4. Configure the Virtual Tunnel Interface (VTI)
+set interfaces vti vti0 address '<VTI_LOCAL_IP>/30'
+set interfaces vti vti0 description 'VTI Tunnel to AWS VPC'
+
+# 5. Connect On-Prem Subnet (192.168.0.0/24) via Static Route to AWS VPC (10.0.0.0/16)
+set protocols static route 10.0.0.0/16 next-hop <VTI_REMOTE_IP>
+
+# 6. Adjust MSS Clamping to prevent packet fragmentation inside the IPsec tunnel
+set firewall options mss-clamp interface-type vti
+set firewall options mss-clamp mss 1379
+
+# 7. Apply and save the configuration
+commit
+save
+exit

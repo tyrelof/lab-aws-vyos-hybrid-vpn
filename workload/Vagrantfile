@@ -1,0 +1,26 @@
+Vagrant.configure("2") do |config|
+  # Run a lightweight Alpine Linux OS
+  config.vm.box = "alpine/alpine64"
+  config.vm.hostname = "on-prem-workload"
+  
+  # Forward SSH port automatically
+  config.vm.network "forwarded_port", guest: 22, host: 2222, id: "ssh", auto_correct: true
+
+  # Connect internal NIC. Must match VirtualBox internal network name used by VyOS's eth1 (LAN)
+  config.vm.network "private_network", ip: "192.168.0.100", virtualbox__intnet: "intnet"
+
+  # VM Provisioning Shell Script
+  config.vm.provision "shell", inline: <<-SHELL
+    apk update
+    apk add bash tcpdump iputils iproute2 traceroute curl
+    
+    # Remove default route to Vagrant NAT gateway so all traffic goes through VyOS
+    ip route del default
+    
+    # Add new default route via the VyOS router IP (192.168.0.1)
+    ip route add default via 192.168.0.1
+    
+    echo "Default gateway successfully set to VyOS (192.168.0.1)"
+    echo "Workload VM is fully provisioned and ready for VPN connectivity testing!"
+  SHELL
+end
