@@ -7,15 +7,17 @@ Welcome to **Lab 01** of my Network & DevOps Engineering portfolio! This project
 ```mermaid
 graph LR
   subgraph On-Premises
-    A[On-Premises Network<br/>192.168.0.0/24] --> B[VyOS Router<br/>Customer Gateway]
+    A[On-Premises Network<br/>192.168.0.0/24] --> |VRRP VIP 192.168.0.1| B[VyOS Router A<br/>Tunnel 1]
+    A --> |VRRP VIP 192.168.0.1| C[VyOS Router B<br/>Tunnel 2]
   end
 
   subgraph AWS Cloud Architecture
-    D(Virtual Private Gateway) --> E[Private Subnet 1<br/>10.0.0.0/24]
-    D(Virtual Private Gateway) --> F[Private Subnet 2<br/>10.0.1.0/24]
+    D(Virtual Private Gateway<br/>BGP ASN 64512) --> E[Private Subnet 1<br/>10.0.0.0/24]
+    D --> F[Private Subnet 2<br/>10.0.1.0/24]
   end
 
-  B <==>|IPsec VPN Tunnel<br/>Static Routing| D
+  B <==>|IPsec Tunnel 1<br/>BGP ASN 65000| D
+  C <==>|IPsec Tunnel 2<br/>BGP ASN 65000| D
 ```
 
 ## 🛠️ Components & Technologies
@@ -106,6 +108,24 @@ The script will actively perform:
 - **MTU/MSS Ping** (1350 bytes) to explicitly prove that packet fragmentation is being handled appropriately without drops.
 Results are automatically logged to `/tmp/test-results.log`.
 
+## 🌪️ The Chaos Test (Manual Failover)
+Now that BGP and VRRP are configured for Hard Mode, we can simulate a catastrophic failure of Tunnel 1 and watch the network self-heal.
+
+1. **Start a Continuous Ping**:
+   From your On-Premises Workload VM, start pinging the AWS Private Subnet:
+   ```bash
+   ping <AWS_PRIVATE_IP>
+   ```
+2. **Bring Down Tunnel 1**:
+   Log into `Router-A` (the Active VRRP master) and simulate an outage by disabling the VTI interface:
+   ```bash
+   configure
+   set interfaces vti vti0 disable
+   commit
+   ```
+3. **Observe Reconvergence**:
+   Watch the ping terminal. You may see a few dropped packets as the BGP Hold Timer expires and VRRP fails over to `Router-B`. Within seconds, traffic will seamlessly reroute over **Tunnel 2** into the AWS VPC Mesh.
+
 🧠 Lessons Learned & Architectural Decisions
 1. Translating Physical Layers to Cloud (L2 vs L3)
 
@@ -132,3 +152,18 @@ Unlike a traditional "flat" office-to-DC connection, I implemented a Zero-Trust 
     Even though the tunnel is "Up," no traffic is allowed by default.
 
     I used Stateful Security Groups to ensure that only the simulated "Admin Workstation" on-prem can SSH into the private AWS instances, rather than the entire 192.168.0.0/24 subnet.
+
+  
+  📖 Project Overview
+
+This lab is a functional demonstration of Hybrid Cloud Engineering, designed to show how traditional on-premises networking principles (Core/Distribution/Access layers) translate into modern Infrastructure as Code (IaC).
+
+Unlike a standard "Hello World" VPN, this project implements a Zero-Trust architecture with automated lifecycle management:
+
+    Infrastructure: A production-grade AWS VPC with isolated private subnets and a Virtual Private Gateway (VGW).
+
+    On-Prem Simulation: A virtualized VyOS edge router—simulating an enterprise hardware appliance—configured with IPsec VTIs and MSS clamping to optimize MTU for encrypted tunnels.
+
+    Automation: Custom Python tooling that bridges the gap between Terraform outputs and network appliance configuration.
+
+    Validation: An Alpine Linux workload that automatically validates the routing path and data-plane integrity.

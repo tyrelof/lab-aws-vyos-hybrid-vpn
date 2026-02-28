@@ -1,0 +1,51 @@
+# ====================================================================
+# VyOS - AWS Site-to-Site VPN HA Configuration (BGP & VRRP)
+# Router: <ROUTER_NAME>
+# ====================================================================
+
+configure
+
+# 1. Define IKE & ESP Group
+set vpn ipsec ike-group AWS-IKE proposal 1 dh-group '2'
+set vpn ipsec ike-group AWS-IKE proposal 1 encryption 'aes128'
+set vpn ipsec ike-group AWS-IKE proposal 1 hash 'sha1'
+set vpn ipsec ike-group AWS-IKE lifetime '28800'
+
+set vpn ipsec esp-group AWS-ESP proposal 1 encryption 'aes128'
+set vpn ipsec esp-group AWS-ESP proposal 1 hash 'sha1'
+set vpn ipsec esp-group AWS-ESP lifetime '3600'
+set vpn ipsec esp-group AWS-ESP pfs 'enable'
+
+# 2. Configure Peer for <TUNNEL_NAME>
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> authentication mode 'pre-shared-secret'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> authentication pre-shared-secret '<PRE_SHARED_KEY>'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> description 'AWS Site-to-Site VPN <TUNNEL_NAME>'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> ike-group 'AWS-IKE'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> local-address 'any'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> vti bind 'vti0'
+set vpn ipsec site-to-site peer <AWS_TUNNEL_IP> vti esp-group 'AWS-ESP'
+
+# 3. Configure the Virtual Tunnel Interface (VTI)
+set interfaces vti vti0 address '<VTI_LOCAL_IP>/30'
+set interfaces vti vti0 description 'VTI <TUNNEL_NAME> to AWS'
+
+# 4. Configure VRRP on internal interface
+set interfaces ethernet eth1 address '<ROUTER_INTERNAL_IP>/24'
+set interfaces ethernet eth1 vrrp vrrp-group 10 virtual-address '192.168.0.1'
+set interfaces ethernet eth1 vrrp vrrp-group 10 priority '<VRRP_PRIORITY>'
+
+# 5. Configure BGP
+set protocols bgp <BGP_ASN> parameters router-id '<ROUTER_INTERNAL_IP>'
+set protocols bgp <BGP_ASN> neighbor <VTI_REMOTE_IP> remote-as '<AWS_BGP_ASN>'
+set protocols bgp <BGP_ASN> neighbor <VTI_REMOTE_IP> description 'AWS BGP Peering'
+set protocols bgp <BGP_ASN> neighbor <VTI_REMOTE_IP> timers holdtime '30'
+set protocols bgp <BGP_ASN> neighbor <VTI_REMOTE_IP> timers keepalive '10'
+set protocols bgp <BGP_ASN> address-family ipv4-unicast network '192.168.0.0/24'
+
+# 6. MSS Clamping
+set firewall options mss-clamp interface-type vti
+set firewall options mss-clamp mss 1379
+
+commit
+save
+exit

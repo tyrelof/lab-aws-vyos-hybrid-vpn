@@ -5,10 +5,12 @@ output "vpn_tunnel_details" {
     tunnel1_preshared_key      = module.vpn.vpn_connection.tunnel1_preshared_key
     tunnel1_cgw_inside_address = module.vpn.vpn_connection.tunnel1_cgw_inside_address
     tunnel1_vgw_inside_address = module.vpn.vpn_connection.tunnel1_vgw_inside_address
+    tunnel1_bgp_asn            = module.vpn.vpn_connection.tunnel1_bgp_asn
     tunnel2_address            = module.vpn.vpn_connection.tunnel2_address
     tunnel2_preshared_key      = module.vpn.vpn_connection.tunnel2_preshared_key
     tunnel2_cgw_inside_address = module.vpn.vpn_connection.tunnel2_cgw_inside_address
     tunnel2_vgw_inside_address = module.vpn.vpn_connection.tunnel2_vgw_inside_address
+    tunnel2_bgp_asn            = module.vpn.vpn_connection.tunnel2_bgp_asn
   }
   sensitive = true
 }
