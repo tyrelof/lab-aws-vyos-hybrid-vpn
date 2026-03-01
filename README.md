@@ -2,6 +2,20 @@
 
 Welcome to **Lab 01** of my Network & DevOps Engineering portfolio! This project demonstrates how to securely connect an on-premises data center with an AWS Virtual Private Cloud (VPC) using a Site-to-Site IPsec VPN using static routing.
 
+  📖 Project Overview
+
+This lab is a functional demonstration of Hybrid Cloud Engineering, designed to show how traditional on-premises networking principles (Core/Distribution/Access layers) translate into modern Infrastructure as Code (IaC).
+
+Unlike a standard "Hello World" VPN, this project implements a Zero-Trust architecture with automated lifecycle management:
+
+    Infrastructure: A production-grade AWS VPC with isolated private subnets and a Virtual Private Gateway (VGW).
+
+    On-Prem Simulation: A virtualized VyOS edge router—simulating an enterprise hardware appliance—configured with IPsec VTIs and MSS clamping to optimize MTU for encrypted tunnels.
+
+    Automation: Custom Python tooling that bridges the gap between Terraform outputs and network appliance configuration.
+
+    Validation: An Alpine Linux workload that automatically validates the routing path and data-plane integrity.
+
 ## 📌 Architecture Diagram
 
 ```mermaid
@@ -153,17 +167,3 @@ Unlike a traditional "flat" office-to-DC connection, I implemented a Zero-Trust 
 
     I used Stateful Security Groups to ensure that only the simulated "Admin Workstation" on-prem can SSH into the private AWS instances, rather than the entire 192.168.0.0/24 subnet.
 
-  
-  📖 Project Overview
-
-This lab is a functional demonstration of Hybrid Cloud Engineering, designed to show how traditional on-premises networking principles (Core/Distribution/Access layers) translate into modern Infrastructure as Code (IaC).
-
-Unlike a standard "Hello World" VPN, this project implements a Zero-Trust architecture with automated lifecycle management:
-
-    Infrastructure: A production-grade AWS VPC with isolated private subnets and a Virtual Private Gateway (VGW).
-
-    On-Prem Simulation: A virtualized VyOS edge router—simulating an enterprise hardware appliance—configured with IPsec VTIs and MSS clamping to optimize MTU for encrypted tunnels.
-
-    Automation: Custom Python tooling that bridges the gap between Terraform outputs and network appliance configuration.
-
-    Validation: An Alpine Linux workload that automatically validates the routing path and data-plane integrity.
